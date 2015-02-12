@@ -1,11 +1,14 @@
 package main
 
 import (
+	"archive/zip"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 )
 
 // ReadFile reads a file from a URL
@@ -52,18 +55,65 @@ func DownloadToFile(_url string, _target string, _name string) {
 	}
 }
 
+// UnzipFile unzips a file
+func UnzipFile(_name string) (unzipped string) {
+	zipfile := _name
+	fmt.Println("Opening to unzip: ", zipfile)
+
+	reader, err := zip.OpenReader(zipfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer reader.Close()
+
+	for _, f := range reader.Reader.File {
+		unzipped = f.Name
+		zipped, err := f.Open()
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer zipped.Close()
+
+		path := filepath.Join("./", f.Name)
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(path, f.Mode())
+			fmt.Println("Creating directory ", path)
+		} else {
+			writer, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE, f.Mode())
+			if err != nil {
+				log.Fatal(err)
+			}
+			defer writer.Close()
+			if _, err = io.Copy(writer, zipped); err != nil {
+				log.Fatal(err)
+			}
+			fmt.Println("Decompressing: ", path)
+		}
+	}
+	return unzipped
+}
+
 // Main works as follows:
 // 1. Delete the target filename, before any download takes place
 // 2. Download the file using DownloadToFile
+// 3. Unzips the Alexa file using UnzipFile
 func main() {
+
+	// Variable assignment
+	var url = os.Args[1]
+	var file = os.Args[2]
+	var tempfile = os.Args[3]
+
 	// Cleanup before download
-	if _, err := os.Stat(os.Args[2]); err == nil {
-		fmt.Println("Removing old file")
-		err2 := os.Remove(os.Args[2])
+	if _, err := os.Stat(file); err == nil {
+		fmt.Println("Removing old file: ", file)
+		err2 := os.Remove(tempfile)
 		if err2 != nil {
 			fmt.Printf("Could not remove old file: %s", err2)
 		}
 	}
 
-	DownloadToFile(os.Args[1], os.Args[2], os.Args[3])
+	DownloadToFile(url, tempfile, file)
+	unzipped := UnzipFile(file)
+	fmt.Println("From main - unzipped: ", unzipped)
 }
