@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"encoding/csv"
 	"fmt"
 	"io"
 	"log"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/fatih/color"
 )
+
+// Host Struct definition to parse the CSV into
+type Host struct {
+	hostname string
+}
 
 // Global declaration for Colored output
 var green = color.New(color.FgGreen).SprintFunc()
@@ -59,10 +65,10 @@ func UnzipFile(_name string) (unzipped string) {
 
 // DownloadFromURL downloads a file from a URL
 // Saves the file in the same path as the executable
-func DownloadFromUrl(url string) (name string) {
+func DownloadFromURL(url string) (name string) {
 	tokens := strings.Split(URL, "/")
 	filename := tokens[len(tokens)-1]
-	fmt.Println("Downloading ",url, "to", filename)
+	fmt.Println("Downloading ", url, "to", filename)
 
 	output, err := os.Create(filename)
 	if err != nil {
@@ -78,7 +84,7 @@ func DownloadFromUrl(url string) (name string) {
 
 	n, err := io.Copy(output, response.Body)
 	if err != nil {
-		log.Fatal (err)
+		log.Fatal(err)
 	}
 
 	fmt.Println(n, " bytes downloaded")
@@ -86,14 +92,42 @@ func DownloadFromUrl(url string) (name string) {
 	return name
 }
 
-// Main works as follows:
-// 1. Delete the target filename, before any download takes place
-// 2. Download the file using DownloadToFile
-// 3. Unzips the Alexa file using UnzipFile
+// CsvParse splits the Alexa file
+func CsvParse(filename string) (hostnames []Host) {
+	csvfile, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer csvfile.Close()
+
+	reader := csv.NewReader(csvfile)
+	rawCsvData, err := reader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var oneRecord Host
+	var allRecords []Host
+	for _, each := range rawCsvData {
+		oneRecord.hostname = each[1]
+		allRecords = append(allRecords, oneRecord)
+	}
+	return allRecords
+
+}
+
+// Main connects to Alexa and downloads the zip file.
+// Then it unzips the file and processes the CSV
 func main() {
-	alexaFile := DownloadFromUrl(URL)
-	unzipped := UnzipFile(alexaFile)
-	fmt.Println("From main - unzipped: ", unzipped)
-	os.Remove(alexaFile)
-	fmt.Println("Removed: ", alexaFile)
+	//alexaFile := DownloadFromURL(URL)
+	//unzipped := UnzipFile(alexaFile)
+	//fmt.Println("From main - unzipped: ", unzipped)
+	//os.Remove(alexaFile)
+	//fmt.Println("Removed: ", alexaFile)
+	fmt.Println("Testing CSV")
+	hosts := CsvParse("koko.csv")
+	//fmt.Println(hosts)
+	for _, host := range hosts {
+		fmt.Println("Host is: ", host)
+	}
 }
