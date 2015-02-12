@@ -4,11 +4,11 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 )
@@ -16,49 +16,8 @@ import (
 // Global declaration for Colored output
 var green = color.New(color.FgGreen).SprintFunc()
 
-// ReadFile reads a file from a URL
-// No checks at this point - generic errors will be returned
-func ReadFile(_url string) (_bytes []byte, _err error) {
-	fmt.Printf("Reading file from: %s \n", green(_url))
-	var res *http.Response
-	res, _err = http.Get(_url)
-	if _err != nil {
-		log.Fatal(_err)
-	}
-
-	_bytes, _err = ioutil.ReadAll(res.Body)
-	defer res.Body.Close()
-	if _err != nil {
-		log.Fatal(_err)
-	}
-
-	//fmt.Printf("ReadFile: %s", string(_bytes))
-	//fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
-	return
-}
-
-// WriteFile writes a file to the disk
-// No error checks at this point
-func WriteFile(_target string, _bytes []byte) (_err error) {
-	//fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
-	if _err = ioutil.WriteFile(_target, _bytes, 0444); _err != nil {
-		log.Fatal(_err)
-	}
-	return
-}
-
-// DownloadToFile access a URL, a target filename and a final filename
-// Downloads the file from the URL and writes it to the _name target
-// No decent error checking at this point
-func DownloadToFile(_url string, _target string, _name string) {
-	fmt.Printf("DownloadToFile from: %s\n", green(_url))
-	if bytes, err := ReadFile(_url); err == nil {
-		fmt.Printf("%s is now downloaded\n", green(_name))
-		if WriteFile(_target, bytes) == nil {
-			fmt.Printf("%s is now copied: %s\n", green(_name), green(_target))
-		}
-	}
-}
+// URL for the Alexa top sites
+const URL string = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
 
 // UnzipFile unzips a file
 func UnzipFile(_name string) (unzipped string) {
@@ -98,27 +57,43 @@ func UnzipFile(_name string) (unzipped string) {
 	return unzipped
 }
 
+// DownloadFromURL downloads a file from a URL
+// Saves the file in the same path as the executable
+func DownloadFromUrl(url string) (name string) {
+	tokens := strings.Split(URL, "/")
+	filename := tokens[len(tokens)-1]
+	fmt.Println("Downloading ",url, "to", filename)
+
+	output, err := os.Create(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer output.Close()
+
+	response, err := http.Get(url)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer response.Body.Close()
+
+	n, err := io.Copy(output, response.Body)
+	if err != nil {
+		log.Fatal (err)
+	}
+
+	fmt.Println(n, " bytes downloaded")
+	name = filename
+	return name
+}
+
 // Main works as follows:
 // 1. Delete the target filename, before any download takes place
 // 2. Download the file using DownloadToFile
 // 3. Unzips the Alexa file using UnzipFile
 func main() {
-
-	// Variable assignment
-	var url = os.Args[1]
-	var file = os.Args[2]
-	var tempfile = os.Args[3]
-
-	// Cleanup before download
-	if _, err := os.Stat(file); err == nil {
-		fmt.Println("Removing old file: ", green(file))
-		err2 := os.Remove(tempfile)
-		if err2 != nil {
-			fmt.Printf("Could not remove old file: %s", err2)
-		}
-	}
-
-	DownloadToFile(url, tempfile, file)
-	unzipped := UnzipFile(file)
+	alexaFile := DownloadFromUrl(URL)
+	unzipped := UnzipFile(alexaFile)
 	fmt.Println("From main - unzipped: ", unzipped)
+	os.Remove(alexaFile)
+	fmt.Println("Removed: ", alexaFile)
 }
