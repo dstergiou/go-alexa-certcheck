@@ -9,12 +9,17 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/fatih/color"
 )
+
+// Global declaration for Colored output
+var green = color.New(color.FgGreen).SprintFunc()
 
 // ReadFile reads a file from a URL
 // No checks at this point - generic errors will be returned
 func ReadFile(_url string) (_bytes []byte, _err error) {
-	fmt.Printf("Reading file from: %s \n", _url)
+	fmt.Printf("Reading file from: %s \n", green(_url))
 	var res *http.Response
 	res, _err = http.Get(_url)
 	if _err != nil {
@@ -28,14 +33,14 @@ func ReadFile(_url string) (_bytes []byte, _err error) {
 	}
 
 	//fmt.Printf("ReadFile: %s", string(_bytes))
-	fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
+	//fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
 	return
 }
 
 // WriteFile writes a file to the disk
 // No error checks at this point
 func WriteFile(_target string, _bytes []byte) (_err error) {
-	fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
+	//fmt.Printf("WriteFile: Size of download: %d\n", len(_bytes))
 	if _err = ioutil.WriteFile(_target, _bytes, 0444); _err != nil {
 		log.Fatal(_err)
 	}
@@ -46,11 +51,11 @@ func WriteFile(_target string, _bytes []byte) (_err error) {
 // Downloads the file from the URL and writes it to the _name target
 // No decent error checking at this point
 func DownloadToFile(_url string, _target string, _name string) {
-	fmt.Printf("DownloadToFile from: %s\n", _url)
+	fmt.Printf("DownloadToFile from: %s\n", green(_url))
 	if bytes, err := ReadFile(_url); err == nil {
-		fmt.Printf("%s is now downloaded\n", _name)
+		fmt.Printf("%s is now downloaded\n", green(_name))
 		if WriteFile(_target, bytes) == nil {
-			fmt.Printf("%s is now copied: %s\n", _name, _target)
+			fmt.Printf("%s is now copied: %s\n", green(_name), green(_target))
 		}
 	}
 }
@@ -58,7 +63,7 @@ func DownloadToFile(_url string, _target string, _name string) {
 // UnzipFile unzips a file
 func UnzipFile(_name string) (unzipped string) {
 	zipfile := _name
-	fmt.Println("Opening to unzip: ", zipfile)
+	fmt.Println("Opening to unzip: ", green(zipfile))
 
 	reader, err := zip.OpenReader(zipfile)
 	if err != nil {
@@ -87,7 +92,7 @@ func UnzipFile(_name string) (unzipped string) {
 			if _, err = io.Copy(writer, zipped); err != nil {
 				log.Fatal(err)
 			}
-			fmt.Println("Decompressing: ", path)
+			fmt.Println("Decompressing: ", green(path))
 		}
 	}
 	return unzipped
@@ -106,7 +111,7 @@ func main() {
 
 	// Cleanup before download
 	if _, err := os.Stat(file); err == nil {
-		fmt.Println("Removing old file: ", file)
+		fmt.Println("Removing old file: ", green(file))
 		err2 := os.Remove(tempfile)
 		if err2 != nil {
 			fmt.Printf("Could not remove old file: %s", err2)
