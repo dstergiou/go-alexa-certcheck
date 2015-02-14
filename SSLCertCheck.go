@@ -9,15 +9,11 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/fatih/color"
 )
-
-// Host Struct definition to parse the CSV into
-type Host struct {
-	hostname string
-}
 
 // Global declaration for Colored output
 var green = color.New(color.FgGreen).SprintFunc()
@@ -93,7 +89,7 @@ func DownloadFromURL(url string) (name string) {
 }
 
 // CsvParse splits the Alexa file
-func CsvParse(filename string) (hostnames []Host) {
+func CsvParse(filename string) (hostnames []string) {
 	csvfile, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -106,14 +102,36 @@ func CsvParse(filename string) (hostnames []Host) {
 		log.Fatal(err)
 	}
 
-	var oneRecord Host
-	var allRecords []Host
+	var hostname string
+	var allRecords []string
 	for _, each := range rawCsvData {
-		oneRecord.hostname = each[1]
-		allRecords = append(allRecords, oneRecord)
+		hostname = each[1]
+		allRecords = append(allRecords, hostname)
 	}
 	return allRecords
 
+}
+
+// SwedishTopSites returns only domains under.se or .nu
+func SwedishTopSites(hostnames []string) (swedishHosts []string) {
+	swedishDomains := regexp.MustCompile(`.*.se$|.*.nu$`)
+	for _, host := range hostnames {
+		isSwedish := swedishDomains.Match([]byte(host))
+		if isSwedish {
+			swedishHosts = append(swedishHosts, host)
+		}
+	}
+	return swedishHosts
+}
+
+// PrintHosts prints a list of hostnames
+func PrintHosts(hostnames []string) {
+	index := 0
+	for _, host := range hostnames {
+		fmt.Println("Host is: ", host)
+		index++
+	}
+	fmt.Println("Total number found:", green(index))
 }
 
 // Main connects to Alexa and downloads the zip file.
@@ -126,8 +144,6 @@ func main() {
 	//fmt.Println("Removed: ", alexaFile)
 	fmt.Println("Testing CSV")
 	hosts := CsvParse("koko.csv")
-	//fmt.Println(hosts)
-	for _, host := range hosts {
-		fmt.Println("Host is: ", host)
-	}
+	swedishHosts := SwedishTopSites(hosts)
+	PrintHosts(swedishHosts)
 }
