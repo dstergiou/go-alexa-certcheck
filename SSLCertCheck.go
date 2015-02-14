@@ -18,8 +18,11 @@ import (
 // Global declaration for Colored output
 var green = color.New(color.FgGreen).SprintFunc()
 
-// URL for the Alexa top sites
+// URL for Alexa file declaration
 const URL string = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
+
+// CA files  declaration
+const CA string = "http://curl.haxx.se/ca/cacert.pem"
 
 // UnzipFile unzips a file
 func UnzipFile(_name string) (unzipped string) {
@@ -62,7 +65,7 @@ func UnzipFile(_name string) (unzipped string) {
 // DownloadFromURL downloads a file from a URL
 // Saves the file in the same path as the executable
 func DownloadFromURL(url string) (name string) {
-	tokens := strings.Split(URL, "/")
+	tokens := strings.Split(url, "/")
 	filename := tokens[len(tokens)-1]
 	fmt.Println("Downloading ", url, "to", filename)
 
@@ -142,6 +145,8 @@ func main() {
 	//fmt.Println("From main - unzipped: ", unzipped)
 	//os.Remove(alexaFile)
 	//fmt.Println("Removed: ", alexaFile)
+	caFile := DownloadFromURL(CA)
+	fmt.Println(caFile)
 	fmt.Println("Testing CSV")
 	hosts := CsvParse("koko.csv")
 	swedishHosts := SwedishTopSites(hosts)
