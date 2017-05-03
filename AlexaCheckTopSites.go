@@ -1,3 +1,6 @@
+// Dimitrios Stergiou <dstergiou@gmail.com
+// Checks Alexa top 1M sites per country domain
+
 package main
 
 import (
@@ -20,9 +23,6 @@ var green = color.New(color.FgGreen).SprintFunc()
 
 // URL for Alexa file declaration
 const URL string = "http://s3.amazonaws.com/alexa-static/top-1m.csv.zip"
-
-// CA files  declaration
-const CA string = "http://curl.haxx.se/ca/cacert.pem"
 
 // UnzipFile unzips a file
 func UnzipFile(_name string) (unzipped string) {
@@ -115,8 +115,8 @@ func CsvParse(filename string) (hostnames []string) {
 
 }
 
-// SwedishTopSites returns only domains under.se or .nu
-func SwedishTopSites(hostnames []string) (swedishHosts []string) {
+// HostsTopSites returns only domains under the domains the user inputted
+func HostsTopSites(hostnames []string) (swedishHosts []string) {
 	swedishDomains := regexp.MustCompile(`.*.se$|.*.nu$`)
 	for _, host := range hostnames {
 		isSwedish := swedishDomains.Match([]byte(host))
@@ -140,15 +140,13 @@ func PrintHosts(hostnames []string) {
 // Main connects to Alexa and downloads the zip file.
 // Then it unzips the file and processes the CSV
 func main() {
-	//alexaFile := DownloadFromURL(URL)
-	//unzipped := UnzipFile(alexaFile)
-	//fmt.Println("From main - unzipped: ", unzipped)
-	//os.Remove(alexaFile)
-	//fmt.Println("Removed: ", alexaFile)
-	caFile := DownloadFromURL(CA)
-	fmt.Println(caFile)
+	alexaFile := DownloadFromURL(URL)
+	unzipped := UnzipFile(alexaFile)
+	fmt.Println("From main - unzipped: ", unzipped)
+	os.Remove(alexaFile)
+	fmt.Println("Removed: ", alexaFile)
 	fmt.Println("Testing CSV")
-	hosts := CsvParse("koko.csv")
-	swedishHosts := SwedishTopSites(hosts)
-	PrintHosts(swedishHosts)
+	hosts := CsvParse("top-1m.csv")
+	topHosts := HostsTopSites(hosts)
+	PrintHosts(topHosts)
 }
