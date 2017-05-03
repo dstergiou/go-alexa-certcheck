@@ -6,6 +6,7 @@ package main
 import (
 	"archive/zip"
 	"encoding/csv"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -67,7 +68,7 @@ func UnzipFile(_name string) (unzipped string) {
 func DownloadFromURL(url string) (name string) {
 	tokens := strings.Split(url, "/")
 	filename := tokens[len(tokens)-1]
-	fmt.Println("Downloading ", url, "to", filename)
+	fmt.Println("Downloading Alexa CSV to", green(filename))
 
 	output, err := os.Create(filename)
 	if err != nil {
@@ -81,12 +82,12 @@ func DownloadFromURL(url string) (name string) {
 	}
 	defer response.Body.Close()
 
-	n, err := io.Copy(output, response.Body)
+	_, err = io.Copy(output, response.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println(n, " bytes downloaded")
+	//fmt.Println(n, " bytes downloaded")
 	name = filename
 	return name
 }
@@ -105,10 +106,9 @@ func CsvParse(filename string) (hostnames []string) {
 		log.Fatal(err)
 	}
 
-	var hostname string
 	var allRecords []string
 	for _, each := range rawCsvData {
-		hostname = each[1]
+		hostname := each[1]
 		allRecords = append(allRecords, hostname)
 	}
 	return allRecords
@@ -116,37 +116,53 @@ func CsvParse(filename string) (hostnames []string) {
 }
 
 // HostsTopSites returns only domains under the domains the user inputted
-func HostsTopSites(hostnames []string) (swedishHosts []string) {
-	swedishDomains := regexp.MustCompile(`.*.se$|.*.nu$`)
+func HostsTopSites(hostnames []string, domain string) (matchedHosts []string) {
+	var regexpBuild string
+	if domain == "se" {
+		regexpBuild = ".*.se$|.*.nu$"
+	} else {
+		regexpBuild = ".*." + domain + "$"
+	}
+	domainToMatch := regexp.MustCompile(regexpBuild)
 	for _, host := range hostnames {
-		isSwedish := swedishDomains.Match([]byte(host))
+		isSwedish := domainToMatch.Match([]byte(host))
 		if isSwedish {
-			swedishHosts = append(swedishHosts, host)
+			matchedHosts = append(matchedHosts, host)
 		}
 	}
-	return swedishHosts
+	return matchedHosts
 }
 
 // PrintHosts prints a list of hostnames
-func PrintHosts(hostnames []string) {
+func PrintHosts(hostnames []string, amount int) {
 	index := 0
 	for _, host := range hostnames {
-		fmt.Println("Host is: ", host)
+		fmt.Println(host)
 		index++
+		if index == amount {
+			break
+		}
 	}
-	fmt.Println("Total number found:", green(index))
+	fmt.Println("Hosts listed:", green(index))
 }
 
 // Main connects to Alexa and downloads the zip file.
 // Then it unzips the file and processes the CSV
 func main() {
+	domainFlag := flag.String("domain", "", "Internet domain to use")
+	amountFlag := flag.Int("amount", 10, "Number of hosts to display")
+	flag.Parse()
+
+	if *domainFlag == "" {
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
 	alexaFile := DownloadFromURL(URL)
-	unzipped := UnzipFile(alexaFile)
-	fmt.Println("From main - unzipped: ", unzipped)
+	_ = UnzipFile(alexaFile)
 	os.Remove(alexaFile)
-	fmt.Println("Removed: ", alexaFile)
-	fmt.Println("Testing CSV")
 	hosts := CsvParse("top-1m.csv")
-	topHosts := HostsTopSites(hosts)
-	PrintHosts(topHosts)
+	fmt.Println("For domain: ", green(*domainFlag))
+	topHosts := HostsTopSites(hosts, *domainFlag)
+	PrintHosts(topHosts, *amountFlag)
 }
