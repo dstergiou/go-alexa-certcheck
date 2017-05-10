@@ -87,7 +87,6 @@ func DownloadFromURL(url string) (name string) {
 		log.Fatal(err)
 	}
 
-	//fmt.Println(n, " bytes downloaded")
 	name = filename
 	return name
 }
@@ -151,6 +150,7 @@ func PrintHosts(hostnames []string, amount int) {
 func main() {
 	domainFlag := flag.String("domain", "", "Internet domain to use")
 	amountFlag := flag.Int("amount", 10, "Number of hosts to display")
+	downloadFlag := flag.Bool("dload", false, "Set the flag for a new download for the CSV file")
 	flag.Parse()
 
 	if *domainFlag == "" {
@@ -158,9 +158,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	alexaFile := DownloadFromURL(URL)
-	_ = UnzipFile(alexaFile)
-	os.Remove(alexaFile)
+	if *downloadFlag {
+		alexaFile := DownloadFromURL(URL)
+		_ = UnzipFile(alexaFile)
+		os.Remove(alexaFile)
+	}
 	hosts := CsvParse("top-1m.csv")
 	fmt.Println("For domain: ", green(*domainFlag))
 	topHosts := HostsTopSites(hosts, *domainFlag)
