@@ -92,10 +92,10 @@ func DownloadFromURL(url string) (name string) {
 }
 
 // CsvParse splits the Alexa file
-func CsvParse(filename string) (hostnames []string) {
+func CsvParse(filename string) (hostnames []string, status error) {
 	csvfile, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	defer csvfile.Close()
 
@@ -110,7 +110,7 @@ func CsvParse(filename string) (hostnames []string) {
 		hostname := each[1]
 		allRecords = append(allRecords, hostname)
 	}
-	return allRecords
+	return allRecords, nil
 
 }
 
@@ -162,8 +162,14 @@ func main() {
 		alexaFile := DownloadFromURL(URL)
 		_ = UnzipFile(alexaFile)
 		os.Remove(alexaFile)
+	} else {
+
 	}
-	hosts := CsvParse("top-1m.csv")
+	hosts, error := CsvParse("top-1m.csv")
+	if error != nil {
+		fmt.Println("You must use the -dload flag, you don't have a CSV file to work with!")
+		os.Exit(1)
+	}
 	fmt.Println("For domain: ", green(*domainFlag))
 	topHosts := HostsTopSites(hosts, *domainFlag)
 	PrintHosts(topHosts, *amountFlag)
