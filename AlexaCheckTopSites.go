@@ -167,8 +167,9 @@ func main() {
 	}
 	hosts, error := CsvParse("top-1m.csv")
 	if error != nil {
-		fmt.Println("You must use the -dload flag, you don't have a CSV file to work with!")
-		os.Exit(1)
+		alexaFile := DownloadFromURL(URL)
+		_ = UnzipFile(alexaFile)
+		os.Remove(alexaFile)
 	}
 	fmt.Println("For domain: ", green(*domainFlag))
 	topHosts := HostsTopSites(hosts, *domainFlag)
